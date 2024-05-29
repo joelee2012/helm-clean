@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -21,7 +22,7 @@ func newRootCmd() *cobra.Command {
 		Long:    `A helm plugin to clean release by date`,
 		Version: "1.0.0",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return clean.Run()
+			return clean.Run(os.Stdout)
 		},
 	}
 	rootCmd.Flags().StringVarP(&clean.Before, "before", "b", "30d", "The last updated time before now, eg: 3d4h")
@@ -66,9 +67,7 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	if err := json.Unmarshal(out, &rList); err != nil {
 		return nil, err
 	}
-
 	now := time.Now()
-
 	var result ReleaseList
 	pattern := regexp.MustCompile(c.Filter)
 	for _, release := range rList {
@@ -84,7 +83,7 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	return result, nil
 }
 
-func (c *Clean) Run() error {
+func (c *Clean) Run(w io.Writer) error {
 	rList, err := c.ListRelease()
 	if err != nil {
 		return err
@@ -92,15 +91,14 @@ func (c *Clean) Run() error {
 
 	for _, release := range rList {
 		if c.DryRun {
-			fmt.Printf("%s, %s, %s, %s, %s\n", release.Namespace, release.Name, release.Updated, release.Chart, release.Version)
+			fmt.Fprintf(w, "%s, %s, %s, %s, %s\n", release.Namespace, release.Name, release.Updated, release.Chart, release.Version)
 		} else {
 			out, err := exec.Command(os.Getenv("HELM_BIN"), "uninstall", "-n", release.Namespace, release.Name).Output()
 			if err != nil {
 				return err
 			}
-			fmt.Println(out)
+			fmt.Fprint(w, string(out))
 		}
 	}
 	return nil
-
 }

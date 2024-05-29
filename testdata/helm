@@ -1,0 +1,60 @@
+#!/bin/bash
+if [ "$1" == "list" ]; then
+  last_week=$(date +%FT%T -d 'last week')
+  two_weeks_ago=$(date +%FT%T -d '2 week ago')
+  now=$(date +%FT%T)
+  cat <<EOF
+[
+  {
+    "name": "release-a",
+    "namespace": "ns-1",
+    "revision": "498",
+    "updated": "${last_week}",
+    "status": "deployed",
+    "chart": "chart1-1.0.0",
+    "app_version": "1.16.0"
+  },
+  {
+    "name": "release-b",
+    "namespace": "ns-1",
+    "revision": "81",
+    "updated": "${last_week}",
+    "status": "deployed",
+    "chart": "chart1-1.0.0",
+    "app_version": "1.16.0"
+  },
+  {
+    "name": "release-c",
+    "namespace": "ns-1",
+    "revision": "250",
+    "updated": "${two_weeks_ago}",
+    "status": "deployed",
+    "chart": "chart2-1.0.0",
+    "app_version": "1.16.0"
+  },
+  {
+    "name": "release-d",
+    "namespace": "ns-1",
+    "revision": "174",
+    "updated": "${now}",
+    "status": "deployed",
+    "chart": "chart1-1.0.0",
+    "app_version": "1.16.0"
+  },
+  {
+    "name": "release-e",
+    "namespace": "ns-1",
+    "revision": "1235",
+    "updated": "${now}",
+    "status": "deployed",
+    "chart": "chart2-1.0.0",
+    "app_version": "1.16.0"
+  }
+]
+EOF
+elif [ "$1" == "uninstall" ]; then
+  echo "$@"
+else
+  echo "unkonwn args: $*"
+  exit 1
+fi
