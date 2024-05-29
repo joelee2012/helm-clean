@@ -1,0 +1,10 @@
+version: "3"
+tasks:
+  default:
+    cmds:
+      - go test -race -coverprofile=coverage.out -covermode=atomic -v ./...
+      - go tool cover -html=coverage.out -o cover.html
+  build:
+    cmds:
+      - go build -o clean -v
+      - ./clean -h
