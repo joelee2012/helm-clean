@@ -40,6 +40,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.Flags().StringVarP(&clean.Before, "before", "b", "0", "The last updated time before now, eg: 3d4h")
 	rootCmd.Flags().StringVarP(&clean.Filter, "filter", "f", ".*", "A regular expression, The chart of releases that match the expression will be included in the results")
 	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
+	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "List releases across all namespaces")
 	return rootCmd
 }
 
@@ -51,9 +52,10 @@ func Execute() {
 }
 
 type Clean struct {
-	Before string
-	DryRun bool
-	Filter string
+	Before       string
+	DryRun       bool
+	Filter       string
+	AllNamespace bool
 }
 
 type Release struct {
@@ -71,6 +73,9 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 		return nil, err
 	}
 	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
+	if c.AllNamespace {
+		args = append(args, "-A")
+	}
 	out, err := exec.Command(os.Getenv("HELM_BIN"), args...).Output()
 	if err != nil {
 		return nil, err
