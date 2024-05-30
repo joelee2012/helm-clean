@@ -65,7 +65,7 @@ type Release struct {
 
 type ReleaseList []*Release
 
-var timeFormat = "2006-01-02T15:04:05 +0800 CST"
+var timeFormat = "2006-01-02 15:04:05 UTC"
 
 func (c *Clean) ListRelease() (ReleaseList, error) {
 	duration, err := str2duration.ParseDuration(c.Before)
