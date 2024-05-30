@@ -24,8 +24,20 @@ func newRootCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return clean.Run(os.Stdout)
 		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			before, err := cmd.Flags().GetString("before")
+			if err != nil {
+				return err
+			}
+
+			_, err = str2duration.ParseDuration(before)
+			if err != nil {
+				return fmt.Errorf("value for --before is wrong: %s", err)
+			}
+			return nil
+		},
 	}
-	rootCmd.Flags().StringVarP(&clean.Before, "before", "b", "30d", "The last updated time before now, eg: 3d4h")
+	rootCmd.Flags().StringVarP(&clean.Before, "before", "b", "0", "The last updated time before now, eg: 3d4h")
 	rootCmd.Flags().StringVarP(&clean.Filter, "filter", "f", ".*", "A regular expression, The chart of releases that match the expression will be included in the results")
 	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
 	return rootCmd
@@ -51,7 +63,7 @@ type Release struct {
 
 type ReleaseList []*Release
 
-var timeFormat = "2006-01-02T15:04:05"
+var timeFormat = "2006-01-02T15:04:05 +0800 CST"
 
 func (c *Clean) ListRelease() (ReleaseList, error) {
 	duration, err := str2duration.ParseDuration(c.Before)
@@ -70,8 +82,12 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	now := time.Now()
 	var result ReleaseList
 	pattern := regexp.MustCompile(c.Filter)
+	loc, err := time.LoadLocation("Local")
+	if err != nil {
+		return nil, err
+	}
 	for _, release := range rList {
-		t, err := time.Parse(timeFormat, release.Updated)
+		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
 		if err != nil {
 			return nil, err
 		}
