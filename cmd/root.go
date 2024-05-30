@@ -20,7 +20,7 @@ func newRootCmd() *cobra.Command {
 		Use:     "clean",
 		Short:   "A helm plugin to clean release by date",
 		Long:    `A helm plugin to clean release by date`,
-		Version: "1.0.0",
+		Version: "0.0.1",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return clean.Run(os.Stdout)
 		},
