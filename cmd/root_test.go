@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func mockHelm(t *testing.T) {
@@ -19,8 +20,9 @@ func mockHelm(t *testing.T) {
 }
 
 func TestListRelease(t *testing.T) {
+	duration, _ := time.ParseDuration("240h")
+	c := Clean{Before: duration, DryRun: true}
 	mockHelm(t)
-	c := Clean{Before: "10d", DryRun: true}
 	rList, err := c.ListRelease()
 	if err != nil {
 		t.Errorf("list release failed with error: %s", err)
@@ -36,11 +38,12 @@ func TestListRelease(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	mockHelm(t)
-	c := Clean{Before: "10d", DryRun: true}
+	duration, _ := time.ParseDuration("240h")
+	c := Clean{Before: duration, DryRun: true}
 	var w bytes.Buffer
 	c.Run(&w)
-	if !strings.Contains(w.String(), "ns-1, release-c") {
-		t.Errorf("expect: ns-1, release-c, 2024-05-15T15:56:54, chart2-1.0.0, 1.16.0, but got: %s", w.String())
+	if !strings.Contains(w.String(), "ns-1,release-c") {
+		t.Errorf("expect: 'ns-1,release-c' in output, but got: %s", w.String())
 	}
 
 	c.DryRun = false
