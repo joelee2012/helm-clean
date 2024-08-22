@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -29,6 +30,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.Flags().StringVarP(&clean.Filter, "filter", "f", "", "A regular expression, The chart of releases that match the expression will be included in the results")
 	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
 	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "List releases across all namespaces")
+	rootCmd.Flags().StringSliceVarP(&clean.Exclude, "exclude", "e", []string{}, "exclude namespace and release")
 	return rootCmd
 }
 
@@ -44,6 +46,7 @@ type Clean struct {
 	DryRun       bool
 	Filter       string
 	AllNamespace bool
+	Exclude      []string
 }
 
 type Release struct {
@@ -75,12 +78,19 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	exclude := regexp.MustCompile(strings.Join(c.Exclude, "|"))
+	checkExclude := len(c.Exclude) > 0
+
 	for _, release := range rList {
 		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
 		if err != nil {
 			return nil, err
 		}
 		if now.After(t.Add(c.Before)) && pattern.MatchString(release.Chart) {
+			if checkExclude && exclude.MatchString(fmt.Sprintf("%s:%s", release.Namespace, release.Name)) {
+				continue
+			}
 			result = append(result, release)
 		}
 	}
