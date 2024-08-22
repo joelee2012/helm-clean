@@ -21,7 +21,7 @@ func mockHelm(t *testing.T) {
 
 func TestListRelease(t *testing.T) {
 	duration, _ := time.ParseDuration("240h")
-	c := Clean{Before: duration, DryRun: true}
+	c := Clean{Before: duration, DryRun: true, AllNamespace: true}
 	mockHelm(t)
 	rList, err := c.ListRelease()
 	if err != nil {
