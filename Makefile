@@ -3,8 +3,8 @@ help: ## Print usage
 .PHONY: help
 
 build: ## build package
-	go build -o clean -v
-	./clean -h
+	go build  -v
+	./helm-clean -h
 .PHONY: build
 
 test: ## run test and generate coverage report
