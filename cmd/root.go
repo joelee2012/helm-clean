@@ -7,59 +7,50 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 
-	str2duration "github.com/xhit/go-str2duration/v2"
+	"github.com/jedib0t/go-pretty/v6/table"
 
 	"github.com/spf13/cobra"
 )
 
-func newRootCmd() *cobra.Command {
+func newRootCmd(version string) *cobra.Command {
 	var clean = Clean{}
 	var rootCmd = &cobra.Command{
 		Use:     "clean",
 		Short:   "A helm plugin to clean release by date",
 		Long:    `A helm plugin to clean release by date`,
-		Version: "0.0.1",
+		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return clean.Run(os.Stdout)
 		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			before, err := cmd.Flags().GetString("before")
-			if err != nil {
-				return err
-			}
-
-			_, err = str2duration.ParseDuration(before)
-			if err != nil {
-				return fmt.Errorf("value for --before is wrong: %s", err)
-			}
-			return nil
-		},
 	}
-	rootCmd.Flags().StringVarP(&clean.Before, "before", "b", "0", "The last updated time before now, eg: 3d4h")
-	rootCmd.Flags().StringVarP(&clean.Filter, "filter", "f", ".*", "A regular expression, The chart of releases that match the expression will be included in the results")
+	rootCmd.Flags().DurationVarP(&clean.Before, "before", "b", 0, "The last updated time before now, eg: 8h")
+	rootCmd.Flags().StringVarP(&clean.Filter, "filter", "f", "", "A regular expression, The chart of releases that match the expression will be included in the results")
 	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
 	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "List releases across all namespaces")
+	rootCmd.Flags().StringSliceVarP(&clean.Exclude, "exclude", "e", []string{}, "exclude namespace and release")
 	return rootCmd
 }
 
-func Execute() {
-	err := newRootCmd().Execute()
+func Execute(version string) {
+	err := newRootCmd(version).Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
 type Clean struct {
-	Before       string
+	Before       time.Duration
 	DryRun       bool
 	Filter       string
 	AllNamespace bool
+	Exclude      []string
 }
 
 type Release struct {
-	Version                                           string `json:"app_version"`
+	AppVersion                                        string `json:"app_version"`
 	Chart, Name, Namespace, Status, Updated, Revision string
 }
 
@@ -68,10 +59,6 @@ type ReleaseList []*Release
 var timeFormat = "2006-01-02 15:04:05 UTC"
 
 func (c *Clean) ListRelease() (ReleaseList, error) {
-	duration, err := str2duration.ParseDuration(c.Before)
-	if err != nil {
-		return nil, err
-	}
 	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
 	if c.AllNamespace {
 		args = append(args, "-A")
@@ -91,13 +78,19 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	exclude := regexp.MustCompile(strings.Join(c.Exclude, "|"))
+	checkExclude := len(c.Exclude) > 0
+
 	for _, release := range rList {
 		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
 		if err != nil {
 			return nil, err
 		}
-		newTime := t.Add(duration)
-		if now.After(newTime) && pattern.MatchString(release.Chart) {
+		if now.After(t.Add(c.Before)) && pattern.MatchString(release.Chart) {
+			if checkExclude && exclude.MatchString(fmt.Sprintf("%s:%s", release.Namespace, release.Name)) {
+				continue
+			}
 			result = append(result, release)
 		}
 	}
@@ -109,11 +102,17 @@ func (c *Clean) Run(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if c.DryRun {
+		t := table.NewWriter()
+		t.SetOutputMirror(w)
+		t.AppendHeader(table.Row{"NAMESPACE", "NAME", "UPDATED", "CHART", "APP VERSION"})
+		for _, release := range rList {
+			t.AppendRow(table.Row{release.Namespace, release.Name, release.Updated, release.Chart, release.AppVersion})
+		}
+		t.RenderCSV()
 
-	for _, release := range rList {
-		if c.DryRun {
-			fmt.Fprintf(w, "%s, %s, %s, %s, %s\n", release.Namespace, release.Name, release.Updated, release.Chart, release.Version)
-		} else {
+	} else {
+		for _, release := range rList {
 			out, err := exec.Command(os.Getenv("HELM_BIN"), "uninstall", "-n", release.Namespace, release.Name).Output()
 			if err != nil {
 				return err

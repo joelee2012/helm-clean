@@ -25,7 +25,7 @@ if [ "$1" == "list" ]; then
   },
   {
     "name": "release-c",
-    "namespace": "ns-1",
+    "namespace": "ns-2",
     "revision": "250",
     "updated": "${two_weeks_ago}",
     "status": "deployed",
@@ -34,7 +34,7 @@ if [ "$1" == "list" ]; then
   },
   {
     "name": "release-d",
-    "namespace": "ns-1",
+    "namespace": "ns-2",
     "revision": "174",
     "updated": "${now}",
     "status": "deployed",
@@ -43,7 +43,7 @@ if [ "$1" == "list" ]; then
   },
   {
     "name": "release-e",
-    "namespace": "ns-1",
+    "namespace": "ns-3",
     "revision": "1235",
     "updated": "${now}",
     "status": "deployed",

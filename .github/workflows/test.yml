@@ -2,10 +2,9 @@ name: test
 on:
   push:
     branches:
-      - "main"
+      - "*"
   pull_request:
     paths-ignore:
-      - "assets/**"
       - "**.md"
 
 jobs:
