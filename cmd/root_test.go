@@ -31,51 +31,47 @@ func TestListRelease(t *testing.T) {
 	for _, r := range rList {
 		names = append(names, r.Name)
 	}
-	if !slices.Contains(names, "release-c") {
-		t.Errorf("expect release-c is in release list %s", names)
+	if !slices.Equal(names, []string{"release-c"}) {
+		t.Errorf("expect only release-c, but got: %s", names)
 	}
 }
 
 func TestRun(t *testing.T) {
 	mockHelm(t)
 	duration, _ := time.ParseDuration("240h")
-	c := Clean{Before: duration, DryRun: true}
+	c := Clean{Before: duration, DryRun: true, AllNamespace: true}
 	var w bytes.Buffer
 	c.Run(&w)
-	if !strings.Contains(w.String(), "ns-1,release-c") {
-		t.Errorf("expect: 'ns-1,release-c' in output, but got: %s", w.String())
+	if !strings.Contains(w.String(), "ns-2,release-c") {
+		t.Errorf("expect: 'ns-2,release-c' in output, but got: %s", w.String())
 	}
 
 	c.DryRun = false
 	w.Reset()
 	c.Run(&w)
-	if w.String() != "uninstall -n ns-1 release-c\n" {
-		t.Errorf("expect: uninstall -n ns-1 release-c, but got: %s", w.String())
+	if w.String() != "uninstall -n ns-2 release-c\n" {
+		t.Errorf("expect: uninstall -n ns-2 release-c, but got: %s", w.String())
 	}
 }
 
-func executeCmd(args []string) (string, string, error) {
-	cmd := newRootCmd()
+func newCmd(args []string) (stdout string, stderr string, err error) {
+	cmd := newRootCmd("dev")
 	var o, e bytes.Buffer
 	cmd.SetOut(&o)
 	cmd.SetErr(&e)
 	cmd.SetArgs(args)
-	err := cmd.Execute()
-	if err != nil {
-		return "", "", err
-	}
-	return o.String(), e.String(), err
+	return o.String(), e.String(), cmd.Execute()
 }
 
 func TestNewRootCmd(t *testing.T) {
-	o, _, err := executeCmd([]string{"-h"})
+	o, _, err := newCmd([]string{"-h"})
 	if err != nil {
 		t.Errorf("execute rootcmd failed: %s", err)
 	}
 	if !strings.Contains(o, "A helm plugin to clean release by date") {
 		t.Errorf("expect x, but got: %s", o)
 	}
-	_, _, err = executeCmd([]string{"-b", "1"})
+	_, _, err = newCmd([]string{"-b", "1"})
 	if !strings.Contains(err.Error(), "missing unit in duration") {
 		t.Errorf("expect missing unit in duration, but got: %s", err)
 	}
