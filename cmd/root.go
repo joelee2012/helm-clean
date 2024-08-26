@@ -15,13 +15,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newRootCmd() *cobra.Command {
+func newRootCmd(version string) *cobra.Command {
 	var clean = Clean{}
 	var rootCmd = &cobra.Command{
 		Use:     "clean",
 		Short:   "A helm plugin to clean release by date",
 		Long:    `A helm plugin to clean release by date`,
-		Version: "0.0.1",
+		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return clean.Run(os.Stdout)
 		},
@@ -34,8 +34,8 @@ func newRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func Execute() {
-	err := newRootCmd().Execute()
+func Execute(version string) {
+	err := newRootCmd(version).Execute()
 	if err != nil {
 		os.Exit(1)
 	}
