@@ -60,16 +60,19 @@ func newCmd(args []string) (stdout string, stderr string, err error) {
 	cmd.SetOut(&o)
 	cmd.SetErr(&e)
 	cmd.SetArgs(args)
-	return o.String(), e.String(), cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		return "", "", err
+	}
+	return o.String(), e.String(), nil
 }
 
 func TestNewRootCmd(t *testing.T) {
-	o, _, err := newCmd([]string{"-h"})
+	o, e, err := newCmd([]string{"-h"})
 	if err != nil {
 		t.Errorf("execute rootcmd failed: %s", err)
 	}
 	if !strings.Contains(o, "A helm plugin to clean release by date") {
-		t.Errorf("expect x, but got: %s", o)
+		t.Errorf("expect usage, but got: %s, %s", o, e)
 	}
 	_, _, err = newCmd([]string{"-b", "1"})
 	if !strings.Contains(err.Error(), "missing unit in duration") {
