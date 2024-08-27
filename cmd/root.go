@@ -18,19 +18,40 @@ import (
 func newRootCmd(version string) *cobra.Command {
 	var clean = Clean{}
 	var rootCmd = &cobra.Command{
-		Use:     "clean",
-		Short:   "A helm plugin to clean release by date",
-		Long:    `A helm plugin to clean release by date`,
+		Use:   "clean",
+		Short: "A helm plugin to clean release by date",
+		Long: `A helm plugin to clean release by date
+		
+Clean/List the release which was updated before duration
+
+Examples:
+	# List all release which was updated before 240h
+	helm clean -A -b 240h
+
+	# List release was create by chart-1
+	helm clean -A -b 240h -f chart-1
+
+	# Exclude namespace match pattern
+	helm clean -A -b 240h -e kube-system
+
+	# Exclude release match pattern
+	helm clean -A -b 240h -e ':release-1'
+
+	# Exclude release and namespace match pattern
+	helm clean -A -b 240h -e '.*-namespace:.*-release'
+`,
 		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return clean.Run(os.Stdout)
 		},
 	}
-	rootCmd.Flags().DurationVarP(&clean.Before, "before", "b", 0, "The last updated time before now, eg: 8h")
-	rootCmd.Flags().StringVarP(&clean.Filter, "filter", "f", "", "A regular expression, The chart of releases that match the expression will be included in the results")
+	rootCmd.Flags().DurationVarP(&clean.Before, "before", "b", 0, "The last updated time before now, eg: 8h, (default 0) equal `helm list`")
 	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
-	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "List releases across all namespaces")
-	rootCmd.Flags().StringSliceVarP(&clean.Exclude, "exclude", "e", []string{}, "exclude namespace and release")
+	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "Check releases across all namespaces")
+	rootCmd.Flags().StringSliceVarP(&clean.Filter, "filter", "f", []string{}, `Regular expression, the chart of releases that matched the 
+expression will be included in the result only (can specify multiple)`)
+	rootCmd.Flags().StringSliceVarP(&clean.Exclude, "exclude", "e", []string{}, `Regular expression '<namespace>:<release>', the matched 
+release and namespace will be excluded from the result (can specify multiple)`)
 	return rootCmd
 }
 
@@ -44,7 +65,7 @@ func Execute(version string) {
 type Clean struct {
 	Before       time.Duration
 	DryRun       bool
-	Filter       string
+	Filter       []string
 	AllNamespace bool
 	Exclude      []string
 }
@@ -73,7 +94,7 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	}
 	now := time.Now()
 	var result ReleaseList
-	pattern := regexp.MustCompile(c.Filter)
+	pattern := regexp.MustCompile(strings.Join(c.Filter, "|"))
 	loc, err := time.LoadLocation("Local")
 	if err != nil {
 		return nil, err
