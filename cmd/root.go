@@ -20,7 +20,9 @@ func newRootCmd(version string) *cobra.Command {
 	var rootCmd = &cobra.Command{
 		Use:   "clean",
 		Short: "A helm plugin to clean release by date",
-		Long: `Clean/List the release which was updated before duration
+		Long: `A helm plugin to clean release by date
+		
+Clean/List the release which was updated before duration
 
 Examples:
 	# List all release which was updated before 240h
