@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+var formats = []string{"csv", "table"}
 
 func newRootCmd(version string) *cobra.Command {
 	var clean = Clean{}
@@ -45,13 +48,23 @@ Examples:
 `,
 		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			return clean.Run(os.Stdout)
+		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			output, _ := cmd.Flags().GetString("output")
+
+			if !slices.Contains(formats, output) {
+				fmt.Printf("Error: invalid format type [%s] for [-o, --output] flag: invalid format type\n", output)
+				os.Exit(1)
+			}
+			return nil
 		},
 	}
 	rootCmd.Flags().DurationVarP(&clean.Before, "before", "b", 0, "The last updated time before now, eg: 8h, (default 0) equal `helm list`")
 	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
 	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "Check releases across all namespaces")
-	rootCmd.Flags().StringVarP(&clean.Output, "output", "o", "table", "prints the output in the specified format. Allowed values: table, csv (default table)")
+	rootCmd.Flags().StringVarP(&clean.Output, "output", "o", "table", "prints the output in the specified format. Allowed values: table, csv")
 	rootCmd.Flags().StringSliceVarP(&clean.IncludeChart, "include-chart", "I", []string{}, `Regular expression, the chart of releases that matched the
 expression will be included in the result only (can specify multiple)`)
 	rootCmd.Flags().StringSliceVarP(&clean.ExcludeChart, "exclude-chart", "E", []string{}, `Regular expression, the chart of releases that matched the
