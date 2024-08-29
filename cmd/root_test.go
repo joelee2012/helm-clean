@@ -39,7 +39,7 @@ func TestListRelease(t *testing.T) {
 func TestRun(t *testing.T) {
 	mockHelm(t)
 	duration, _ := time.ParseDuration("240h")
-	c := Clean{Before: duration, DryRun: true, AllNamespace: true}
+	c := Clean{Before: duration, DryRun: true, AllNamespace: true, Output: "csv"}
 	var w bytes.Buffer
 	c.Run(&w)
 	if !strings.Contains(w.String(), "ns-2,release-c") {
@@ -77,5 +77,9 @@ func TestNewRootCmd(t *testing.T) {
 	_, _, err = newCmd([]string{"-b", "1"})
 	if !strings.Contains(err.Error(), "missing unit in duration") {
 		t.Errorf("expect missing unit in duration, but got: %s", err)
+	}
+	_, _, err = newCmd([]string{"-o", "x"})
+	if !strings.Contains(err.Error(), "invalid format type") {
+		t.Errorf("expect invalid format type, but got: %s", err)
 	}
 }
