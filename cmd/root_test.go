@@ -79,7 +79,7 @@ func TestNewRootCmd(t *testing.T) {
 		t.Errorf("expect missing unit in duration, but got: %s", err)
 	}
 	_, _, err = newCmd([]string{"-o", "x"})
-	if !strings.Contains(err.Error(), "Error: invalid format type") {
-		t.Errorf("expect Error: invalid format type, but got: %s", err)
+	if !strings.Contains(err.Error(), "invalid format type") {
+		t.Errorf("expect invalid format type, but got: %s", err)
 	}
 }
