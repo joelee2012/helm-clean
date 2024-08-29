@@ -51,6 +51,7 @@ Examples:
 	rootCmd.Flags().DurationVarP(&clean.Before, "before", "b", 0, "The last updated time before now, eg: 8h, (default 0) equal `helm list`")
 	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
 	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "Check releases across all namespaces")
+	rootCmd.Flags().StringVarP(&clean.Output, "output", "o", "table", "prints the output in the specified format. Allowed values: table, csv (default table)")
 	rootCmd.Flags().StringSliceVarP(&clean.IncludeChart, "include-chart", "I", []string{}, `Regular expression, the chart of releases that matched the
 expression will be included in the result only (can specify multiple)`)
 	rootCmd.Flags().StringSliceVarP(&clean.ExcludeChart, "exclude-chart", "E", []string{}, `Regular expression, the chart of releases that matched the
@@ -77,6 +78,7 @@ type Clean struct {
 	IncludeChart []string
 	Exclude      []string
 	Include      []string
+	Output       string
 }
 
 type Release struct {
@@ -143,7 +145,13 @@ func (c *Clean) Run(w io.Writer) error {
 		for _, release := range rList {
 			t.AppendRow(table.Row{release.Namespace, release.Name, release.Updated, release.Chart, release.AppVersion})
 		}
-		t.RenderCSV()
+		t.SortBy([]table.SortBy{{Name: "NAMESPACE", Mode: table.Asc}, {Name: "NAME", Mode: table.Asc}})
+		switch c.Output {
+		case "table":
+			t.Render()
+		case "csv":
+			t.RenderCSV()
+		}
 
 	} else {
 		for _, release := range rList {
