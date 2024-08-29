@@ -55,8 +55,7 @@ Examples:
 			output, _ := cmd.Flags().GetString("output")
 
 			if !slices.Contains(formats, output) {
-				fmt.Printf("Error: invalid format type [%s] for [-o, --output] flag: invalid format type\n", output)
-				os.Exit(1)
+				return fmt.Errorf("invalid format type [%s] for [-o, --output] flag", output)
 			}
 			return nil
 		},
