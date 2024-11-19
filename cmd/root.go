@@ -107,6 +107,10 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	if c.AllNamespace {
 		args = append(args, "-A")
 	}
+	helm := os.Getenv("HELM_BIN")
+	if helm == "" {
+		return nil, fmt.Errorf("require environment variable HELM_BIN, but not found")
+	}
 	out, err := exec.Command(os.Getenv("HELM_BIN"), args...).Output()
 	if err != nil {
 		return nil, err
@@ -115,6 +119,7 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	if err := json.Unmarshal(out, &rList); err != nil {
 		return nil, err
 	}
+
 	now := time.Now()
 	var result ReleaseList
 	loc, err := time.LoadLocation("Local")
@@ -167,7 +172,7 @@ func (c *Clean) Run(w io.Writer) error {
 
 	} else {
 		for _, release := range rList {
-			out, err := exec.Command(os.Getenv("HELM_BIN"), "uninstall", "-n", release.Namespace, release.Name).Output()
+			out, err := exec.Command(os.Getenv("HELM_BIN"), "uninstall", "-n", release.Namespace, release.Name).CombinedOutput()
 			if err != nil {
 				return err
 			}
