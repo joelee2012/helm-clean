@@ -4,3 +4,6 @@ usage: "plugin to clean no updated release"
 description: "plugin to clean no updated release"
 useTunnel: true
 command: "$HELM_PLUGIN_DIR/helm-clean"
+hooks:
+  install: "$HELM_PLUGIN_DIR/install-binary.sh"
+  update: "$HELM_PLUGIN_DIR/install-binary.sh -u"
