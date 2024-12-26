@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,6 +73,7 @@ expression will be excluded from the result (can specify multiple)`)
 release and namespace will be included in result only (can specify multiple)`)
 	rootCmd.Flags().StringSliceVarP(&clean.Exclude, "exclude", "e", []string{}, `Regular expression '<namespace>:<release>', the matched 
 release and namespace will be excluded from the result (can specify multiple)`)
+	rootCmd.Flags().IntVarP(&clean.Max, "max", "m", 256, "maximum number of releases to fetch (default 256)")
 	return rootCmd
 }
 
@@ -91,6 +93,7 @@ type Clean struct {
 	Exclude      []string
 	Include      []string
 	Output       string
+	Max          int
 }
 
 type Release struct {
@@ -106,6 +109,9 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
 	if c.AllNamespace {
 		args = append(args, "-A")
+	}
+	if c.Max != 256 {
+		args = append(args, "-m", strconv.Itoa(c.Max))
 	}
 	helm := os.Getenv("HELM_BIN")
 	if helm == "" {
