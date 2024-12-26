@@ -2,9 +2,8 @@
 # this was copied from git@github.com:databus23/helm-diff
 if [ -n "$HELM_DEBUG" ]; then
   set -x
+  env | sort
 fi
-
-env | sort
 
 REPO_URL=$(git remote get-url origin)
 PROJECT_NAME=${HELM_PLUGIN_DIR##*/}
