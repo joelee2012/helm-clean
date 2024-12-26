@@ -1,8 +1,7 @@
 name: "clean"
-version: "dev"
+version: "0.5.0"
 usage: "plugin to clean no updated release"
 description: "plugin to clean no updated release"
-useTunnel: true
 platformCommand:
   - command: "$HELM_PLUGIN_DIR/helm-clean"
 hooks:
