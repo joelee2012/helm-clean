@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
 # this was copied from git@github.com:databus23/helm-diff
-if [ -n "$HELM_DEBUG" ]; then
+if [ "$HELM_DEBUG" = true ]; then
   set -x
   env | sort
 fi
 
 REPO_URL=$(git remote get-url origin)
 PROJECT_NAME=${HELM_PLUGIN_DIR##*/}
-PROJECT_GH=$(echo "${REPO_URL##*:}" | sed -r 's!.*://[^/]*/([^.]*).*!\1!g')
+PROJECT_GH=$(echo "${REPO_URL##*:}" | sed -r 's!.git$!!g')
 export GREP_COLOR="never"
 
 # Convert HELM_BIN and HELM_PLUGIN_DIR to unix if cygpath is
