@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -110,7 +111,7 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 		args = append(args, "-A")
 	}
 	if c.Max != 256 {
-		args = append(args, "-m", string(c.Max))
+		args = append(args, "-m", strconv.Itoa(c.Max))
 	}
 	helm := os.Getenv("HELM_BIN")
 	if helm == "" {
