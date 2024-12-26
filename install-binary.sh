@@ -101,7 +101,7 @@ downloadFile() {
 installFile() {
   tar xzf "$PLUGIN_TMP_FILE" -C "$HELM_TMP"
   echo "Preparing to install into ${HELM_PLUGIN_DIR}"
-  cp "$HELM_TMP/*" "$HELM_PLUGIN_DIR/"
+  cp -r "$HELM_TMP/." "$HELM_PLUGIN_DIR/"
 }
 
 # exit_trap is executed if on exit (error or not).
