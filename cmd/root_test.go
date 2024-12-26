@@ -71,7 +71,7 @@ func TestNewRootCmd(t *testing.T) {
 	if err != nil {
 		t.Errorf("execute rootcmd failed: %s", err)
 	}
-	if !strings.Contains(o, "A helm plugin to clean release by date") {
+	if !strings.Contains(o, "A helm plugin to list/clean out of date releases") {
 		t.Errorf("expect usage, but got: %s, %s", o, e)
 	}
 	_, _, err = newCmd([]string{"-b", "1"})

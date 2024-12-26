@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 # this was copied from git@github.com:databus23/helm-diff
+cd $HELM_PLUGIN_DIR
+set -e
 if [ "$HELM_DEBUG" = true ]; then
   set -x
   env | sort
@@ -7,7 +9,7 @@ fi
 
 REPO_URL=$(git remote get-url origin)
 PROJECT_NAME=${HELM_PLUGIN_DIR##*/}
-PROJECT_GH=$(echo "${REPO_URL##*:}" | sed -r 's!.git$!!g')
+PROJECT_GH=$(echo "${REPO_URL}" | awk -F'/' '{print $4"/"$5}' | sed -r 's!\.git$!!g')
 export GREP_COLOR="never"
 
 # Convert HELM_BIN and HELM_PLUGIN_DIR to unix if cygpath is
@@ -84,7 +86,7 @@ downloadFile() {
     echo "Either curl or wget is required"
     exit 1
   fi
-  version=$(git -C "$HELM_PLUGIN_DIR" describe --tags --exact-match 2>/dev/null | sed 's/^v//g' || :)
+  version=$(git describe --tags --exact-match 2>/dev/null | sed 's/^v//g' || :)
   if [ "$SCRIPT_MODE" = "install" ] && [ -n "$version" ]; then
     DOWNLOAD_URL="https://github.com/$PROJECT_GH/releases/download/v$version/${PROJECT_NAME}_${version}_${OS}_${ARCH}.tar.gz"
   else
@@ -110,24 +112,22 @@ exit_trap() {
   rmTempDir
   if [ "$result" != "0" ]; then
     echo "Failed to install $PROJECT_NAME"
-    printf '\tFor support, go to ${REPO_URL}.\n'
+    echo "For support, go to ${REPO_URL}."
   fi
   exit $result
 }
 
 # testVersion tests the installed client to make sure it is working.
 testVersion() {
-  set +e
   echo "${PROJECT_NAME} installed into $HELM_PLUGIN_DIR"
   "$HELM_BIN" "$HELM_PLUGIN_NAME" -h
-  set -e
 }
 
 # Execution
 
 #Stop execution on any error
 trap "exit_trap" EXIT
-set -e
+
 initArch
 initOS
 mkTempDir
