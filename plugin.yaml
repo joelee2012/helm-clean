@@ -5,10 +5,6 @@ description: "plugin to clean no updated release"
 useTunnel: true
 platformCommand:
   - command: "$HELM_PLUGIN_DIR/helm-clean"
-platformHooks:
-  install:
-    - command: "$HELM_PLUGIN_DIR/install-binary.sh"
-  update:
-    - command: "$HELM_PLUGIN_DIR/install-binary.sh"
-      args:
-        - -u
+hooks:
+  install: "$HELM_PLUGIN_DIR/install-binary.sh"
+  update: "$HELM_PLUGIN_DIR/install-binary.sh -u"
