@@ -171,6 +171,9 @@ func (c *Clean) Run(w io.Writer) error {
 		t.SortBy([]table.SortBy{{Name: "NAMESPACE", Mode: table.Asc}, {Name: "NAME", Mode: table.Asc}})
 		switch c.Output {
 		case "table":
+			s := table.StyleLight
+			s.Options = table.OptionsNoBordersAndSeparators
+			t.SetStyle(s)
 			t.Render()
 		case "csv":
 			t.RenderCSV()
