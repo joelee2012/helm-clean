@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -48,9 +49,8 @@ Examples:
 	helm clean -A -b 240h -e '.*-namespace:.*-release'
 `,
 		Version: version,
-		RunE: func(cmd *cobra.Command, args []string) error {
-
-			return clean.Run(os.Stdout)
+		Run: func(cmd *cobra.Command, args []string) {
+			clean.Run(os.Stdout)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			output, _ := cmd.Flags().GetString("output")
@@ -97,15 +97,35 @@ type Clean struct {
 }
 
 type Release struct {
-	AppVersion                                        string `json:"app_version"`
-	Chart, Name, Namespace, Status, Updated, Revision string
+	AppVersion string `json:"app_version"`
+	Chart      string
+	Name       string
+	Namespace  string
+	Status     string
+	Updated    string
+	Revision   string
 }
 
-type ReleaseList []*Release
+type RList []*Release
 
 var timeFormat = "2006-01-02 15:04:05 UTC"
 
-func (c *Clean) ListRelease() (ReleaseList, error) {
+func RunCmd(name string, args ...string) (RList, error) {
+	cmd := exec.Command(name, args...)
+	var stderr, stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	if err := cmd.Wait(); err != nil {
+		return nil, fmt.Errorf("command %s, %s", err, stderr.String())
+	}
+	var rList RList
+	cobra.CheckErr(json.NewDecoder(&stdout).Decode(&rList))
+	return rList, nil
+}
+func (c *Clean) ListRelease() (RList, error) {
 	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
 	if c.AllNamespace {
 		args = append(args, "-A")
@@ -117,17 +137,12 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	if helm == "" {
 		return nil, fmt.Errorf("require environment variable HELM_BIN, but not found")
 	}
-	out, err := exec.Command(os.Getenv("HELM_BIN"), args...).Output()
+	rList, err := RunCmd(os.Getenv("HELM_BIN"), args...)
 	if err != nil {
-		return nil, err
-	}
-	var rList ReleaseList
-	if err := json.Unmarshal(out, &rList); err != nil {
 		return nil, err
 	}
 
 	now := time.Now()
-	var result ReleaseList
 	loc, err := time.LoadLocation("Local")
 	if err != nil {
 		return nil, err
@@ -140,6 +155,7 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	exclude := regexp.MustCompile(strings.Join(c.Exclude, "|"))
 	checkExclude := len(c.Exclude) > 0
 
+	var result RList
 	for _, release := range rList {
 		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
 		if err != nil {
@@ -156,11 +172,9 @@ func (c *Clean) ListRelease() (ReleaseList, error) {
 	return result, nil
 }
 
-func (c *Clean) Run(w io.Writer) error {
+func (c *Clean) Run(w io.Writer) {
 	rList, err := c.ListRelease()
-	if err != nil {
-		return err
-	}
+	cobra.CheckErr(err)
 	if c.DryRun {
 		t := table.NewWriter()
 		t.SetOutputMirror(w)
@@ -182,11 +196,8 @@ func (c *Clean) Run(w io.Writer) error {
 	} else {
 		for _, release := range rList {
 			out, err := exec.Command(os.Getenv("HELM_BIN"), "uninstall", "-n", release.Namespace, release.Name).CombinedOutput()
-			if err != nil {
-				return err
-			}
+			cobra.CheckErr(err)
 			fmt.Fprint(w, string(out))
 		}
 	}
-	return nil
 }

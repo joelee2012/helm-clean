@@ -24,3 +24,6 @@ lint: ## lint code
 	staticcheck ./...
 
 .PHONY: lint
+
+release:
+	goreleaser release --snapshot --clean
