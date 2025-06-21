@@ -110,8 +110,12 @@ type RList []*Release
 
 var timeFormat = "2006-01-02 15:04:05 UTC"
 
-func RunCmd(name string, args ...string) (RList, error) {
-	cmd := exec.Command(name, args...)
+func RunHelmCmd(args ...string) (*bytes.Buffer, error) {
+	helm := os.Getenv("HELM_BIN")
+	if helm == "" {
+		return nil, fmt.Errorf("require environment variable HELM_BIN, but not found")
+	}
+	cmd := exec.Command(helm, args...)
 	var stderr, stdout bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
@@ -121,9 +125,8 @@ func RunCmd(name string, args ...string) (RList, error) {
 	if err := cmd.Wait(); err != nil {
 		return nil, fmt.Errorf("command %s, %s", err, stderr.String())
 	}
-	var rList RList
-	cobra.CheckErr(json.NewDecoder(&stdout).Decode(&rList))
-	return rList, nil
+	return &stdout, nil
+
 }
 func (c *Clean) ListRelease() (RList, error) {
 	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
@@ -133,15 +136,13 @@ func (c *Clean) ListRelease() (RList, error) {
 	if c.Max != 256 {
 		args = append(args, "-m", strconv.Itoa(c.Max))
 	}
-	helm := os.Getenv("HELM_BIN")
-	if helm == "" {
-		return nil, fmt.Errorf("require environment variable HELM_BIN, but not found")
-	}
-	rList, err := RunCmd(os.Getenv("HELM_BIN"), args...)
+
+	stdout, err := RunHelmCmd(args...)
 	if err != nil {
 		return nil, err
 	}
-
+	var rList RList
+	cobra.CheckErr(json.NewDecoder(stdout).Decode(&rList))
 	now := time.Now()
 	loc, err := time.LoadLocation("Local")
 	if err != nil {
@@ -173,17 +174,8 @@ func (c *Clean) ListRelease() (RList, error) {
 }
 
 func (c *Clean) Run(w io.Writer) {
-<<<<<<< HEAD
-<<<<<<< HEAD
 	rList, err := c.ListRelease()
 	cobra.CheckErr(err)
-=======
-	rList := c.ListRelease()
->>>>>>> fix issue
-=======
-	rList, err := c.ListRelease()
-	cobra.CheckErr(err)
->>>>>>> fix issue
 	if c.DryRun {
 		t := table.NewWriter()
 		t.SetOutputMirror(w)
