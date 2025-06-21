@@ -111,20 +111,22 @@ type RList []*Release
 
 var timeFormat = "2006-01-02 15:04:05 UTC"
 
-func RunCmd(name string, args ...string) RList {
+func RunCmd(name string, args ...string) (RList, error) {
 	cmd := exec.Command(name, args...)
 	var stderr, stdout bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
-	cobra.CheckErr(cmd.Start())
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
 	if err := cmd.Wait(); err != nil {
-		cobra.CheckErr(fmt.Errorf("command %s, %s", err, stderr.String()))
+		return nil, fmt.Errorf("command %s, %s", err, stderr.String())
 	}
 	var rList RList
 	cobra.CheckErr(json.NewDecoder(&stdout).Decode(&rList))
-	return rList
+	return rList, nil
 }
-func (c *Clean) ListRelease() RList {
+func (c *Clean) ListRelease() (RList, error) {
 	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
 	if c.AllNamespace {
 		args = append(args, "-A")
@@ -134,14 +136,19 @@ func (c *Clean) ListRelease() RList {
 	}
 	helm := os.Getenv("HELM_BIN")
 	if helm == "" {
-		cobra.CheckErr(fmt.Errorf("require environment variable HELM_BIN, but not found"))
+		return nil, fmt.Errorf("require environment variable HELM_BIN, but not found")
 	}
-	rList := RunCmd(os.Getenv("HELM_BIN"), args...)
+	rList, err := RunCmd(os.Getenv("HELM_BIN"), args...)
+	if err != nil {
+		return nil, err
+	}
 
 	now := time.Now()
 	var result RList
 	loc, err := time.LoadLocation("Local")
-	cobra.CheckErr(err)
+	if err != nil {
+		return nil, err
+	}
 
 	includeChart := regexp.MustCompile(strings.Join(c.IncludeChart, "|"))
 	excludeChart := regexp.MustCompile(strings.Join(c.ExcludeChart, "|"))
@@ -152,7 +159,9 @@ func (c *Clean) ListRelease() RList {
 
 	for _, release := range rList {
 		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
-		cobra.CheckErr(err)
+		if err != nil {
+			return nil, err
+		}
 		rn := fmt.Sprintf("%s:%s", release.Namespace, release.Name)
 		if now.After(t.Add(c.Before)) && includeChart.MatchString(release.Chart) && include.MatchString(rn) {
 			if (checkExclude && exclude.MatchString(rn)) || (checkExcludeChart && excludeChart.MatchString(release.Chart)) {
@@ -161,11 +170,12 @@ func (c *Clean) ListRelease() RList {
 			result = append(result, release)
 		}
 	}
-	return result
+	return result, nil
 }
 
 func (c *Clean) Run(w io.Writer) {
-	rList := c.ListRelease()
+	rList, err := c.ListRelease()
+	cobra.CheckErr(err)
 	if c.DryRun {
 		t := table.NewWriter()
 		t.SetOutputMirror(w)
