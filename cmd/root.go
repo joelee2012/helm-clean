@@ -50,7 +50,6 @@ Examples:
 `,
 		Version: version,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			clean.Run(os.Stdout)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -144,7 +143,6 @@ func (c *Clean) ListRelease() (RList, error) {
 	}
 
 	now := time.Now()
-	var result RList
 	loc, err := time.LoadLocation("Local")
 	if err != nil {
 		return nil, err
@@ -157,6 +155,7 @@ func (c *Clean) ListRelease() (RList, error) {
 	exclude := regexp.MustCompile(strings.Join(c.Exclude, "|"))
 	checkExclude := len(c.Exclude) > 0
 
+	var result RList
 	for _, release := range rList {
 		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
 		if err != nil {
