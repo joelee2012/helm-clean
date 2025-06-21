@@ -50,10 +50,6 @@ Examples:
 `,
 		Version: version,
 		Run: func(cmd *cobra.Command, args []string) {
-<<<<<<< HEAD
-=======
-
->>>>>>> fix issue
 			clean.Run(os.Stdout)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -148,7 +144,9 @@ func (c *Clean) ListRelease() (RList, error) {
 
 	now := time.Now()
 	loc, err := time.LoadLocation("Local")
-	cobra.CheckErr(err)
+	if err != nil {
+		return nil, err
+	}
 
 	includeChart := regexp.MustCompile(strings.Join(c.IncludeChart, "|"))
 	excludeChart := regexp.MustCompile(strings.Join(c.ExcludeChart, "|"))
@@ -160,7 +158,9 @@ func (c *Clean) ListRelease() (RList, error) {
 	var result RList
 	for _, release := range rList {
 		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
-		cobra.CheckErr(err)
+		if err != nil {
+			return nil, err
+		}
 		rn := fmt.Sprintf("%s:%s", release.Namespace, release.Name)
 		if now.After(t.Add(c.Before)) && includeChart.MatchString(release.Chart) && include.MatchString(rn) {
 			if (checkExclude && exclude.MatchString(rn)) || (checkExcludeChart && excludeChart.MatchString(release.Chart)) {
@@ -169,15 +169,20 @@ func (c *Clean) ListRelease() (RList, error) {
 			result = append(result, release)
 		}
 	}
-	return result
+	return result, nil
 }
 
 func (c *Clean) Run(w io.Writer) {
+<<<<<<< HEAD
 <<<<<<< HEAD
 	rList, err := c.ListRelease()
 	cobra.CheckErr(err)
 =======
 	rList := c.ListRelease()
+>>>>>>> fix issue
+=======
+	rList, err := c.ListRelease()
+	cobra.CheckErr(err)
 >>>>>>> fix issue
 	if c.DryRun {
 		t := table.NewWriter()
