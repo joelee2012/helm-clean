@@ -3,7 +3,6 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -124,7 +123,7 @@ func RunHelmCmd(args ...string) (*bytes.Buffer, error) {
 		return nil, err
 	}
 	if err := cmd.Wait(); err != nil {
-		return nil, errors.Join(err, errors.New(stderr.String()))
+		return nil, fmt.Errorf("%v: %s", err, stderr.String())
 	}
 	return &stdout, nil
 

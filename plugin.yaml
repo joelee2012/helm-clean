@@ -1,5 +1,5 @@
 name: "clean"
-version: "0.7.0"
+version: "0.8.0"
 usage: "List/Clean out of date releases"
 description: "List/Clean out of date releases"
 command: "$HELM_PLUGIN_DIR/helm-clean"
