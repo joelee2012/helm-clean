@@ -21,7 +21,7 @@ func mockHelm(t *testing.T) {
 
 func TestListRelease(t *testing.T) {
 	duration, _ := time.ParseDuration("240h")
-	c := Clean{Before: duration, DryRun: true, AllNamespace: true}
+	c := CleanOpts{Before: duration, DryRun: true, AllNamespace: true}
 	mockHelm(t)
 	rList, err := c.ListRelease()
 	if err != nil {
@@ -39,7 +39,7 @@ func TestListRelease(t *testing.T) {
 func TestRun(t *testing.T) {
 	mockHelm(t)
 	duration, _ := time.ParseDuration("240h")
-	c := Clean{Before: duration, DryRun: true, AllNamespace: true, Output: "csv"}
+	c := CleanOpts{Before: duration, DryRun: true, AllNamespace: true, Output: "csv"}
 	var w bytes.Buffer
 	c.Run(&w)
 	if !strings.Contains(w.String(), "ns-2,release-c") {
