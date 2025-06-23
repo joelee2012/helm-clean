@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -123,7 +124,7 @@ func RunHelmCmd(args ...string) (*bytes.Buffer, error) {
 		return nil, err
 	}
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("command %s, %s", err, stderr.String())
+		return nil, errors.Join(err, errors.New(stderr.String()))
 	}
 	return &stdout, nil
 
@@ -196,9 +197,9 @@ func (c *Clean) Run(w io.Writer) {
 
 	} else {
 		for _, release := range rList {
-			out, err := exec.Command(os.Getenv("HELM_BIN"), "uninstall", "-n", release.Namespace, release.Name).CombinedOutput()
+			out, err := RunHelmCmd("uninstall", "-n", release.Namespace, release.Name)
 			cobra.CheckErr(err)
-			fmt.Fprint(w, string(out))
+			fmt.Fprint(w, out.String())
 		}
 	}
 }
