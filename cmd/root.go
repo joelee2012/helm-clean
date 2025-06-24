@@ -151,17 +151,17 @@ func (c *CleanOpts) ListRelease() (RList, error) {
 	checkExclude := len(c.Exclude) > 0
 
 	var result RList
-	for _, release := range rList {
-		updateTime, err := time.Parse(timeFormat, release.Updated)
+	for _, r := range rList {
+		updateTime, err := time.Parse(timeFormat, r.Updated)
 		if err != nil {
 			return nil, err
 		}
-		rn := fmt.Sprintf("%s:%s", release.Namespace, release.Name)
-		if now.After(updateTime.Add(c.Before)) && includeChart.MatchString(release.Chart) && include.MatchString(rn) {
-			if (checkExclude && exclude.MatchString(rn)) || (checkExcludeChart && excludeChart.MatchString(release.Chart)) {
+		rn := fmt.Sprintf("%s:%s", r.Namespace, r.Name)
+		if now.After(updateTime.Add(c.Before)) && includeChart.MatchString(r.Chart) && include.MatchString(rn) {
+			if (checkExclude && exclude.MatchString(rn)) || (checkExcludeChart && excludeChart.MatchString(r.Chart)) {
 				continue
 			}
-			result = append(result, release)
+			result = append(result, r)
 		}
 	}
 	return result, nil
@@ -173,11 +173,11 @@ func (c *CleanOpts) Run(w io.Writer) {
 	if c.DryRun {
 		t := table.NewWriter()
 		t.SetOutputMirror(w)
-		t.AppendHeader(table.Row{"NAMESPACE", "NAME", "UPDATED", "CHART", "APP VERSION"})
-		for _, release := range rList {
-			t.AppendRow(table.Row{release.Namespace, release.Name, release.Updated, release.Chart, release.AppVersion})
+		t.AppendHeader(table.Row{"NAME", "NAMESPACE", "REVISION", "UPDATED", "STATUS", "CHART", "APP VERSION"})
+		for _, r := range rList {
+			t.AppendRow(table.Row{r.Name, r.Namespace, r.Revision, r.Updated, r.Status, r.Chart, r.AppVersion})
 		}
-		t.SortBy([]table.SortBy{{Name: "NAMESPACE", Mode: table.Asc}, {Name: "NAME", Mode: table.Asc}})
+		t.SortBy([]table.SortBy{{Name: "NAME", Mode: table.Asc}, {Name: "NAMESPACE", Mode: table.Asc}})
 		switch c.Output {
 		case "table":
 			s := table.StyleLight

@@ -42,8 +42,8 @@ func TestRun(t *testing.T) {
 	c := CleanOpts{Before: duration, DryRun: true, AllNamespace: true, Output: "csv"}
 	var w bytes.Buffer
 	c.Run(&w)
-	if !strings.Contains(w.String(), "ns-2,release-c") {
-		t.Errorf("expect: 'ns-2,release-c' in output, but got: %s", w.String())
+	if !strings.Contains(w.String(), "release-c,ns-2") {
+		t.Errorf("expect: 'release-c,ns-2' in output, but got: %s", w.String())
 	}
 
 	c.DryRun = false
