@@ -143,11 +143,6 @@ func (c *CleanOpts) ListRelease() (RList, error) {
 	var rList RList
 	cobra.CheckErr(json.NewDecoder(stdout).Decode(&rList))
 	now := time.Now()
-	loc, err := time.LoadLocation("Local")
-	if err != nil {
-		return nil, err
-	}
-
 	includeChart := regexp.MustCompile(strings.Join(c.IncludeChart, "|"))
 	excludeChart := regexp.MustCompile(strings.Join(c.ExcludeChart, "|"))
 	checkExcludeChart := len(c.ExcludeChart) > 0
@@ -157,12 +152,12 @@ func (c *CleanOpts) ListRelease() (RList, error) {
 
 	var result RList
 	for _, release := range rList {
-		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
+		updateTime, err := time.Parse(timeFormat, release.Updated)
 		if err != nil {
 			return nil, err
 		}
 		rn := fmt.Sprintf("%s:%s", release.Namespace, release.Name)
-		if now.After(t.Add(c.Before)) && includeChart.MatchString(release.Chart) && include.MatchString(rn) {
+		if now.After(updateTime.Add(c.Before)) && includeChart.MatchString(release.Chart) && include.MatchString(rn) {
 			if (checkExclude && exclude.MatchString(rn)) || (checkExcludeChart && excludeChart.MatchString(release.Chart)) {
 				continue
 			}
