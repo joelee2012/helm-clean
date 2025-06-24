@@ -108,7 +108,7 @@ type Release struct {
 
 type RList []*Release
 
-var timeFormat = "2006-01-02 15:04:05 UTC"
+var timeFormat = "2006-01-02 15:04:05.999999999 -0700 MST"
 
 func RunHelmCmd(args ...string) (*bytes.Buffer, error) {
 	helm := os.Getenv("HELM_BIN")
@@ -126,10 +126,9 @@ func RunHelmCmd(args ...string) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("%v: %s", err, stderr.String())
 	}
 	return &stdout, nil
-
 }
 func (c *CleanOpts) ListRelease() (RList, error) {
-	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
+	args := []string{"list", "--no-headers", "-o", "json"}
 	if c.AllNamespace {
 		args = append(args, "-A")
 	}
