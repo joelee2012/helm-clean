@@ -1,8 +1,8 @@
 #!/bin/bash
 if [ "$1" == "list" ]; then
-  last_week=$(date "+%F %T %Z" -d 'last week' -u)
-  two_weeks_ago=$(date "+%F %T %Z" -d '2 week ago' -u)
-  now=$(date "+%F %T %Z" -u)
+  last_week=$(date "+%F %T.%N %z %Z" -d 'last week')
+  two_weeks_ago=$(date "+%F %T.%N %z %Z" -d '2 week ago')
+  now=$(date "+%F %T.%N %z %Z")
   cat <<EOF
 [
   {

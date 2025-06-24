@@ -21,7 +21,7 @@ import (
 var formats = []string{"csv", "table"}
 
 func newRootCmd(version string) *cobra.Command {
-	var clean = Clean{}
+	var opts = CleanOpts{}
 	var rootCmd = &cobra.Command{
 		Use:   "clean",
 		Short: "A helm plugin to list/clean out of date releases",
@@ -50,7 +50,7 @@ Examples:
 `,
 		Version: version,
 		Run: func(cmd *cobra.Command, args []string) {
-			clean.Run(os.Stdout)
+			opts.Run(os.Stdout)
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			output, _ := cmd.Flags().GetString("output")
@@ -61,19 +61,19 @@ Examples:
 			return nil
 		},
 	}
-	rootCmd.Flags().DurationVarP(&clean.Before, "before", "b", 0, "The last updated time before now, eg: 8h, (default 0) equal run 'helm list'")
-	rootCmd.Flags().BoolVarP(&clean.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
-	rootCmd.Flags().BoolVarP(&clean.AllNamespace, "all-namespaces", "A", false, "Check releases across all namespaces")
-	rootCmd.Flags().StringVarP(&clean.Output, "output", "o", "table", "prints the output in the specified format. Allowed values: table, csv")
-	rootCmd.Flags().StringSliceVarP(&clean.IncludeChart, "include-chart", "I", []string{}, `Regular expression, the chart of releases that matched the
+	rootCmd.Flags().DurationVarP(&opts.Before, "before", "b", 0, "The last updated time before now, eg: 8h, (default 0) equal run 'helm list'")
+	rootCmd.Flags().BoolVarP(&opts.DryRun, "dry-run", "d", true, "Dry run mode only print the release info")
+	rootCmd.Flags().BoolVarP(&opts.AllNamespace, "all-namespaces", "A", false, "Check releases across all namespaces")
+	rootCmd.Flags().StringVarP(&opts.Output, "output", "o", "table", "prints the output in the specified format. Allowed values: table, csv")
+	rootCmd.Flags().StringSliceVarP(&opts.IncludeChart, "include-chart", "I", []string{}, `Regular expression, the chart of releases that matched the
 expression will be included in the result only (can specify multiple)`)
-	rootCmd.Flags().StringSliceVarP(&clean.ExcludeChart, "exclude-chart", "E", []string{}, `Regular expression, the chart of releases that matched the
+	rootCmd.Flags().StringSliceVarP(&opts.ExcludeChart, "exclude-chart", "E", []string{}, `Regular expression, the chart of releases that matched the
 expression will be excluded from the result (can specify multiple)`)
-	rootCmd.Flags().StringSliceVarP(&clean.Include, "include", "i", []string{}, `Regular expression '<namespace>:<release>', the matched
+	rootCmd.Flags().StringSliceVarP(&opts.Include, "include", "i", []string{}, `Regular expression '<namespace>:<release>', the matched
 release and namespace will be included in result only (can specify multiple)`)
-	rootCmd.Flags().StringSliceVarP(&clean.Exclude, "exclude", "e", []string{}, `Regular expression '<namespace>:<release>', the matched 
+	rootCmd.Flags().StringSliceVarP(&opts.Exclude, "exclude", "e", []string{}, `Regular expression '<namespace>:<release>', the matched 
 release and namespace will be excluded from the result (can specify multiple)`)
-	rootCmd.Flags().IntVarP(&clean.Max, "max", "m", 256, "maximum number of releases to fetch (default 256)")
+	rootCmd.Flags().IntVarP(&opts.Max, "max", "m", 256, "maximum number of releases to fetch (default 256)")
 	return rootCmd
 }
 
@@ -84,7 +84,7 @@ func Execute(version string) {
 	}
 }
 
-type Clean struct {
+type CleanOpts struct {
 	Before       time.Duration
 	DryRun       bool
 	AllNamespace bool
@@ -108,7 +108,7 @@ type Release struct {
 
 type RList []*Release
 
-var timeFormat = "2006-01-02 15:04:05 UTC"
+var timeFormat = "2006-01-02 15:04:05.999999999 -0700 MST"
 
 func RunHelmCmd(args ...string) (*bytes.Buffer, error) {
 	helm := os.Getenv("HELM_BIN")
@@ -123,13 +123,12 @@ func RunHelmCmd(args ...string) (*bytes.Buffer, error) {
 		return nil, err
 	}
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("command %s, %s", err, stderr.String())
+		return nil, fmt.Errorf("%v: %s", err, stderr.String())
 	}
 	return &stdout, nil
-
 }
-func (c *Clean) ListRelease() (RList, error) {
-	args := []string{"list", "--no-headers", "-o", "json", "--time-format", timeFormat}
+func (c *CleanOpts) ListRelease() (RList, error) {
+	args := []string{"list", "--no-headers", "-o", "json"}
 	if c.AllNamespace {
 		args = append(args, "-A")
 	}
@@ -144,11 +143,6 @@ func (c *Clean) ListRelease() (RList, error) {
 	var rList RList
 	cobra.CheckErr(json.NewDecoder(stdout).Decode(&rList))
 	now := time.Now()
-	loc, err := time.LoadLocation("Local")
-	if err != nil {
-		return nil, err
-	}
-
 	includeChart := regexp.MustCompile(strings.Join(c.IncludeChart, "|"))
 	excludeChart := regexp.MustCompile(strings.Join(c.ExcludeChart, "|"))
 	checkExcludeChart := len(c.ExcludeChart) > 0
@@ -157,33 +151,33 @@ func (c *Clean) ListRelease() (RList, error) {
 	checkExclude := len(c.Exclude) > 0
 
 	var result RList
-	for _, release := range rList {
-		t, err := time.ParseInLocation(timeFormat, release.Updated, loc)
+	for _, r := range rList {
+		updateTime, err := time.Parse(timeFormat, r.Updated)
 		if err != nil {
 			return nil, err
 		}
-		rn := fmt.Sprintf("%s:%s", release.Namespace, release.Name)
-		if now.After(t.Add(c.Before)) && includeChart.MatchString(release.Chart) && include.MatchString(rn) {
-			if (checkExclude && exclude.MatchString(rn)) || (checkExcludeChart && excludeChart.MatchString(release.Chart)) {
+		rn := fmt.Sprintf("%s:%s", r.Namespace, r.Name)
+		if now.After(updateTime.Add(c.Before)) && includeChart.MatchString(r.Chart) && include.MatchString(rn) {
+			if (checkExclude && exclude.MatchString(rn)) || (checkExcludeChart && excludeChart.MatchString(r.Chart)) {
 				continue
 			}
-			result = append(result, release)
+			result = append(result, r)
 		}
 	}
 	return result, nil
 }
 
-func (c *Clean) Run(w io.Writer) {
+func (c *CleanOpts) Run(w io.Writer) {
 	rList, err := c.ListRelease()
 	cobra.CheckErr(err)
 	if c.DryRun {
 		t := table.NewWriter()
 		t.SetOutputMirror(w)
-		t.AppendHeader(table.Row{"NAMESPACE", "NAME", "UPDATED", "CHART", "APP VERSION"})
-		for _, release := range rList {
-			t.AppendRow(table.Row{release.Namespace, release.Name, release.Updated, release.Chart, release.AppVersion})
+		t.AppendHeader(table.Row{"NAME", "NAMESPACE", "REVISION", "UPDATED", "STATUS", "CHART", "APP VERSION"})
+		for _, r := range rList {
+			t.AppendRow(table.Row{r.Name, r.Namespace, r.Revision, r.Updated, r.Status, r.Chart, r.AppVersion})
 		}
-		t.SortBy([]table.SortBy{{Name: "NAMESPACE", Mode: table.Asc}, {Name: "NAME", Mode: table.Asc}})
+		t.SortBy([]table.SortBy{{Name: "NAME", Mode: table.Asc}, {Name: "NAMESPACE", Mode: table.Asc}})
 		switch c.Output {
 		case "table":
 			s := table.StyleLight
@@ -196,9 +190,9 @@ func (c *Clean) Run(w io.Writer) {
 
 	} else {
 		for _, release := range rList {
-			out, err := exec.Command(os.Getenv("HELM_BIN"), "uninstall", "-n", release.Namespace, release.Name).CombinedOutput()
+			out, err := RunHelmCmd("uninstall", "-n", release.Namespace, release.Name)
 			cobra.CheckErr(err)
-			fmt.Fprint(w, string(out))
+			fmt.Fprint(w, out.String())
 		}
 	}
 }
